@@ -19,9 +19,12 @@ import {
   ChevronRight,
   Download,
   FileText,
+  Calendar,
 } from "lucide-react"
 import { DetailedSectionAnalysis } from "./detailed-section-analysis"
+import { FollowUpModal } from "./follow-up-modal"
 import { ReportGenerator, type DetailedAnalysis } from "@/lib/report-generator"
+import { DocumentExportService } from "@/lib/document-export"
 
 interface BrandAnalysisDashboardProps {
   data: any
@@ -29,6 +32,8 @@ interface BrandAnalysisDashboardProps {
 
 export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+  const [isExporting, setIsExporting] = useState<string | null>(null)
 
   // Add safety checks for data structure
   if (!data || !data.userInfo) {
@@ -108,18 +113,47 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
     navigator.clipboard.writeText(text)
   }
 
-  const downloadReport = () => {
-    const reportContent = ReportGenerator.generateComprehensiveReport(data.userInfo, detailedAnalysis, recommendations)
+  const handleDownloadReport = async () => {
+    setIsExporting("word")
+    try {
+      const reportContent = ReportGenerator.generateComprehensiveReport(
+        data.userInfo,
+        detailedAnalysis,
+        recommendations,
+      )
+      const filename = `${data.userInfo.name.replace(/\s+/g, "_")}_Brand_Analysis_Report`
 
-    const blob = new Blob([reportContent], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${data.userInfo.name.replace(/\s+/g, "_")}_Brand_Analysis_Report.md`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+      await DocumentExportService.exportToWord(reportContent, filename)
+    } catch (error) {
+      console.error("Error exporting to Word:", error)
+      alert("Error exporting document. Please try again.")
+    } finally {
+      setIsExporting(null)
+    }
+  }
+
+  const handleExportToPDF = async () => {
+    setIsExporting("pdf")
+    try {
+      const reportContent = ReportGenerator.generateComprehensiveReport(
+        data.userInfo,
+        detailedAnalysis,
+        recommendations,
+      )
+      const filename = `${data.userInfo.name.replace(/\s+/g, "_")}_Brand_Analysis_Report`
+
+      await DocumentExportService.exportToPDF(reportContent, filename)
+    } catch (error) {
+      console.error("Error exporting to PDF:", error)
+      alert("Error exporting PDF. Please try again.")
+    } finally {
+      setIsExporting(null)
+    }
+  }
+
+  const handleFollowUpScheduled = (followUp: any) => {
+    console.log("Follow-up scheduled:", followUp)
+    // You could show a toast notification here
   }
 
   const scoreCategories = [
@@ -490,16 +524,27 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center">
-        <Button variant="outline" onClick={downloadReport}>
+        <Button variant="outline" onClick={handleDownloadReport} disabled={isExporting === "word"}>
           <Download className="h-4 w-4 mr-2" />
-          Download Full Report
+          {isExporting === "word" ? "Exporting..." : "Download Report (.doc)"}
         </Button>
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleExportToPDF} disabled={isExporting === "pdf"}>
           <FileText className="h-4 w-4 mr-2" />
-          Export to PDF
+          {isExporting === "pdf" ? "Exporting..." : "Export to PDF"}
         </Button>
-        <Button>Schedule Follow-up Analysis</Button>
+        <Button onClick={() => setShowFollowUpModal(true)}>
+          <Calendar className="h-4 w-4 mr-2" />
+          Schedule Follow-up Analysis
+        </Button>
       </div>
+
+      {/* Follow-up Modal */}
+      <FollowUpModal
+        userProfile={userInfo}
+        isOpen={showFollowUpModal}
+        onClose={() => setShowFollowUpModal(false)}
+        onScheduled={handleFollowUpScheduled}
+      />
     </div>
   )
 }
