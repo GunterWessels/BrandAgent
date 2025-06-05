@@ -16,10 +16,12 @@ import {
   AlertCircle,
   Lightbulb,
   Copy,
-  ExternalLink,
-  ArrowLeft,
   ChevronRight,
+  Download,
+  FileText,
 } from "lucide-react"
+import { DetailedSectionAnalysis } from "./detailed-section-analysis"
+import { ReportGenerator, type DetailedAnalysis } from "@/lib/report-generator"
 
 interface BrandAnalysisDashboardProps {
   data: any
@@ -29,7 +31,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
 
   // Add safety checks for data structure
-  if (!data || !data.userProfile) {
+  if (!data || !data.userInfo) {
     return (
       <Card className="max-w-4xl mx-auto">
         <CardContent className="flex items-center justify-center py-16">
@@ -42,20 +44,52 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
     )
   }
 
+  // Check for additional insights from interactive waiting experience
+  const additionalInsights = data.userInfo.additionalInsights || {}
+
+  // Generate detailed analysis
+  const detailedAnalysis: DetailedAnalysis = ReportGenerator.generateDetailedAnalysis(
+    data.userInfo,
+    data.webData || {},
+    { ...data.interactiveAnswers, ...additionalInsights } || {},
+  )
+
   // Provide default values for missing data
-  const userInfo = data.userProfile || { name: "User" }
+  const userInfo = data.userInfo || { name: "User" }
   const scores = data.scores || {
-    professionalIdentity: 0,
-    platformConsistency: 0,
-    thoughtLeadership: 0,
-    networkStrength: 0,
-    discoverability: 0,
+    professionalIdentity: detailedAnalysis.professionalIdentity.score,
+    platformConsistency: detailedAnalysis.platformConsistency.score,
+    thoughtLeadership: detailedAnalysis.thoughtLeadership.score,
+    networkStrength: detailedAnalysis.networkStrength.score,
+    discoverability: detailedAnalysis.discoverability.score,
   }
   const insights = data.insights || {
-    strengths: [],
-    improvements: [],
+    strengths: detailedAnalysis.professionalIdentity.keyStrengths,
+    improvements: detailedAnalysis.professionalIdentity.improvementAreas,
   }
   const recommendations = data.recommendations || []
+
+  // Enhance recommendations with additional insights if available
+  if (additionalInsights["specific-expertise"] && !recommendations.some((r) => r.category === "Specialization")) {
+    recommendations.push({
+      category: "Specialization",
+      priority: "High",
+      action: `Highlight your expertise in ${additionalInsights["specific-expertise"]} across all platforms`,
+      template: `${userInfo.industry} Specialist in ${additionalInsights["specific-expertise"]} | Driving Improved Outcomes`,
+    })
+  }
+
+  if (
+    additionalInsights["value-metric"] &&
+    !recommendations.some((r) => r.action?.includes(additionalInsights["value-metric"]))
+  ) {
+    recommendations.push({
+      category: "Value Proposition",
+      priority: "Medium",
+      action: `Emphasize ${additionalInsights["value-metric"]} in your messaging and case studies`,
+      template: `Helping healthcare providers achieve ${additionalInsights["value-metric"]} through innovative medical device solutions`,
+    })
+  }
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600"
@@ -74,6 +108,20 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
     navigator.clipboard.writeText(text)
   }
 
+  const downloadReport = () => {
+    const reportContent = ReportGenerator.generateComprehensiveReport(data.userInfo, detailedAnalysis, recommendations)
+
+    const blob = new Blob([reportContent], { type: "text/markdown" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${data.userInfo.name.replace(/\s+/g, "_")}_Brand_Analysis_Report.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const scoreCategories = [
     {
       id: "professionalIdentity",
@@ -84,7 +132,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
     },
     {
       id: "platformConsistency",
-      title: "Consistency",
+      title: "Platform Consistency",
       icon: Target,
       color: "green",
       score: scores.platformConsistency,
@@ -114,34 +162,38 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
 
   if (selectedSection) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => setSelectedSection(null)} className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Overview
-          </Button>
-          <h2 className="text-2xl font-semibold">
-            {scoreCategories.find((cat) => cat.id === selectedSection)?.title} Analysis
-          </h2>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <p>
-              Detailed analysis for {selectedSection} would appear here with specific recommendations and action items.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <DetailedSectionAnalysis
+        sectionId={selectedSection}
+        analysis={detailedAnalysis}
+        onBack={() => setSelectedSection(null)}
+      />
     )
   }
+
+  const overallScore = Math.round(
+    (scores.professionalIdentity +
+      scores.platformConsistency +
+      scores.thoughtLeadership +
+      scores.networkStrength +
+      scores.discoverability) /
+      5,
+  )
 
   return (
     <div className="space-y-8">
       {/* Header with overall score */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Brand Analysis for {userInfo.name}</CardTitle>
-          <CardDescription>Comprehensive analysis of your personal brand across digital platforms</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl">Brand Analysis for {userInfo.name}</CardTitle>
+              <CardDescription>Comprehensive analysis of your personal brand across digital platforms</CardDescription>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">{overallScore}%</div>
+              <div className="text-sm text-gray-600">Overall Score</div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-5 gap-6">
@@ -225,6 +277,41 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* Quick Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Key Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {detailedAnalysis.networkStrength.networkAnalysis.size.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600">Network Size</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {detailedAnalysis.thoughtLeadership.contentAnalysis.frequency}
+                  </div>
+                  <div className="text-sm text-gray-600">Content Frequency</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {detailedAnalysis.thoughtLeadership.industryPresence.mentions}
+                  </div>
+                  <div className="text-sm text-gray-600">Online Mentions</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {detailedAnalysis.discoverability.onlinePresence.googleResults}
+                  </div>
+                  <div className="text-sm text-gray-600">Google Results</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="recommendations" className="space-y-6">
@@ -277,16 +364,26 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
                 <ul className="space-y-3">
                   <li className="flex items-start gap-2">
                     <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
-                    <span className="text-sm">Share a case study about a successful medical device implementation</span>
+                    <span className="text-sm">
+                      Share a case study about a successful implementation in {userInfo.industry}
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
-                    <span className="text-sm">Post about emerging trends in healthcare technology</span>
+                    <span className="text-sm">Post about emerging trends in {userInfo.industry}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
                     <span className="text-sm">Share insights from recent industry conferences</span>
                   </li>
+                  {additionalInsights["specific-expertise"] && (
+                    <li className="flex items-start gap-2">
+                      <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <span className="text-sm">
+                        Create a series on innovations in {additionalInsights["specific-expertise"]}
+                      </span>
+                    </li>
+                  )}
                 </ul>
               </CardContent>
             </Card>
@@ -299,7 +396,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
                 <ul className="space-y-3">
                   <li className="flex items-start gap-2">
                     <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
-                    <span className="text-sm">Quick tips for healthcare professionals</span>
+                    <span className="text-sm">Quick tips for {userInfo.industry} professionals</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
@@ -309,6 +406,14 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
                     <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
                     <span className="text-sm">Behind-the-scenes insights from your work</span>
                   </li>
+                  {additionalInsights["value-metric"] && (
+                    <li className="flex items-start gap-2">
+                      <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <span className="text-sm">
+                        Share metrics on how your work improves {additionalInsights["value-metric"]}
+                      </span>
+                    </li>
+                  )}
                 </ul>
               </CardContent>
             </Card>
@@ -323,19 +428,21 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="font-medium mb-2">Template:</p>
-                  <p className="text-sm mb-4">
-                    [Your Expertise] | Helping [Target Audience] [Achieve Specific Outcome] | [Years] Years Experience |
-                    [Key Differentiator]
-                  </p>
+                  <p className="font-medium mb-2">Recommended Headline:</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Example for Medical Device Sales:</span>
+                    <p className="text-sm italic flex-1">
+                      {additionalInsights["specific-expertise"]
+                        ? `${userInfo.industry} Expert in ${additionalInsights["specific-expertise"]} | Helping Organizations Achieve Better Outcomes`
+                        : detailedAnalysis.professionalIdentity.suggestedHeadline}
+                    </p>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() =>
                         copyToClipboard(
-                          "Medical Device Sales Expert | Helping Healthcare Organizations Improve Patient Outcomes | 10+ Years Experience | Specializing in Surgical Technologies",
+                          additionalInsights["specific-expertise"]
+                            ? `${userInfo.industry} Expert in ${additionalInsights["specific-expertise"]} | Helping Organizations Achieve Better Outcomes`
+                            : detailedAnalysis.professionalIdentity.suggestedHeadline,
                         )
                       }
                     >
@@ -343,22 +450,53 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
                       Copy
                     </Button>
                   </div>
-                  <p className="text-sm italic mt-2">
-                    "Medical Device Sales Expert | Helping Healthcare Organizations Improve Patient Outcomes | 10+ Years
-                    Experience | Specializing in Surgical Technologies"
-                  </p>
                 </div>
               </CardContent>
             </Card>
+
+            {additionalInsights["value-metric"] && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Value Proposition Template</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <p className="font-medium mb-2">Recommended Value Proposition:</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm italic flex-1">
+                        Helping healthcare providers achieve {additionalInsights["value-metric"]} through innovative
+                        medical device solutions
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          copyToClipboard(
+                            `Helping healthcare providers achieve ${additionalInsights["value-metric"]} through innovative medical device solutions`,
+                          )
+                        }
+                      >
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center">
+        <Button variant="outline" onClick={downloadReport}>
+          <Download className="h-4 w-4 mr-2" />
+          Download Full Report
+        </Button>
         <Button variant="outline">
-          <ExternalLink className="h-4 w-4 mr-2" />
-          Export Report
+          <FileText className="h-4 w-4 mr-2" />
+          Export to PDF
         </Button>
         <Button>Schedule Follow-up Analysis</Button>
       </div>

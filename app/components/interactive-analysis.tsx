@@ -36,6 +36,7 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
   const [analysisResults, setAnalysisResults] = useState<any>(null)
   const [webData, setWebData] = useState<any>(null)
   const [isScrapingProfiles, setIsScrapingProfiles] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const steps = [
     {
@@ -98,6 +99,8 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
     }
 
     setIsLoading(true)
+    setError(null)
+
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -113,13 +116,19 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
       })
 
       if (!response.ok) {
-        throw new Error("Failed to load questions")
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
-      setQuestions(data.questions)
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      setQuestions(data.questions || [])
     } catch (error) {
       console.error("Error loading questions:", error)
+      setError("Failed to load questions. Using fallback questions.")
       // Fallback questions
       setQuestions(getFallbackQuestions(stepIndex))
     }
@@ -128,6 +137,8 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
 
   const scrapeProfiles = async () => {
     setIsScrapingProfiles(true)
+    setError(null)
+
     try {
       if (userProfile.linkedinUrl || userProfile.twitterHandle) {
         const response = await fetch("/api/analyze", {
@@ -142,14 +153,19 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
         })
 
         if (!response.ok) {
-          throw new Error("Failed to scrape profiles")
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
         const data = await response.json()
         setWebData(data)
+      } else {
+        // No profiles to scrape
+        setWebData({})
       }
     } catch (error) {
       console.error("Error scraping profiles:", error)
+      setError("Profile analysis encountered an issue, but we'll continue with the assessment.")
+      setWebData({})
     }
     setIsScrapingProfiles(false)
   }
@@ -223,6 +239,8 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
 
   const performFinalAnalysis = async () => {
     setIsLoading(true)
+    setError(null)
+
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -238,10 +256,14 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
       })
 
       if (!response.ok) {
-        throw new Error("Failed to complete analysis")
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
 
       const finalResults = {
         userProfile: { ...userProfile, refinedGoals: data.refinedGoals },
@@ -267,8 +289,10 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
       onComplete(finalResults)
     } catch (error) {
       console.error("Error in final analysis:", error)
+      setError("Analysis completed with some limitations. Showing available results.")
+
       // Provide fallback results
-      onComplete({
+      const fallbackResults = {
         userProfile,
         scores: {
           professionalIdentity: 70,
@@ -277,16 +301,43 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
           networkStrength: 80,
           discoverability: 55,
         },
-        insights: { strengths: ["Industry expertise"], improvements: ["Need better online presence"] },
+        insights: {
+          strengths: ["Industry expertise", "Professional communication"],
+          improvements: ["Need better online presence", "Content strategy needs development"],
+        },
         recommendations: [
-          { category: "LinkedIn", priority: "High", action: "Update headline", reasoning: "Better visibility" },
+          {
+            category: "LinkedIn",
+            priority: "High",
+            action: "Update headline to highlight specific expertise",
+            reasoning: "Better visibility and positioning",
+            template: `${userProfile.industry} Expert | Helping Organizations Achieve Better Outcomes | 8+ Years Experience`,
+          },
         ],
-      })
+        interactiveAnswers: answers,
+        webData: webData || {},
+      }
+
+      onComplete(fallbackResults)
     }
     setIsLoading(false)
   }
 
   const progress = ((currentStep + 1) / steps.length) * 100
+
+  // Error display
+  if (error && !isLoading) {
+    return (
+      <Card className="max-w-4xl mx-auto">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <AlertCircle className="h-12 w-12 text-orange-600 mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Notice</h3>
+          <p className="text-gray-600 text-center mb-4">{error}</p>
+          <Button onClick={() => setError(null)}>Continue</Button>
+        </CardContent>
+      </Card>
+    )
+  }
 
   // Web presence analysis loading screen
   if (isScrapingProfiles) {

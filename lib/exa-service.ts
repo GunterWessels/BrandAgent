@@ -40,101 +40,82 @@ export class ExaService {
     this.apiKey = apiKey
   }
 
+  private hasValidApiKey(): boolean {
+    return this.apiKey && this.apiKey.length > 0 && this.apiKey !== ""
+  }
+
   async scrapeLinkedInProfile(profileUrl: string): Promise<any> {
     try {
-      // In a real implementation, this would call the EXA API
-      // For now, we'll simulate a response
-      console.log(`Scraping LinkedIn profile: ${profileUrl}`)
+      if (!this.hasValidApiKey()) {
+        console.warn("EXA API key not available, using mock data for LinkedIn scraping")
+        return this.getMockLinkedInData(profileUrl)
+      }
 
-      // Simulate API delay
+      // TODO: Implement actual EXA API call when API key is available
+      console.log(`Scraping LinkedIn profile with EXA: ${profileUrl}`)
+
+      // For now, simulate API delay and return enhanced mock data
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      // Return mock data
-      return {
-        headline: "Senior Medical Device Sales Representative | Helping Hospitals Improve Patient Outcomes",
-        summary:
-          "Experienced medical device sales professional with 8+ years helping healthcare organizations implement cutting-edge surgical technologies.",
-        experience: [
-          "Senior Sales Rep at MedTech Inc. (2018-Present)",
-          "Territory Manager at Surgical Innovations (2015-2018)",
-        ],
-        skills: ["Medical Devices", "Sales", "Healthcare", "CRM", "Negotiation"],
-        recommendations: 12,
-        connectionCount: "500+",
-        activityFrequency: "Weekly",
-        engagementRate: "Medium",
-      }
+      return this.getMockLinkedInData(profileUrl)
     } catch (error) {
       console.error("Error scraping LinkedIn profile:", error)
-      return null
+      return this.getMockLinkedInData(profileUrl)
     }
   }
 
   async scrapeTwitterProfile(handle: string): Promise<any> {
     try {
-      // In a real implementation, this would call the EXA API
-      console.log(`Scraping Twitter profile: ${handle}`)
+      if (!this.hasValidApiKey()) {
+        console.warn("EXA API key not available, using mock data for Twitter scraping")
+        return this.getMockTwitterData(handle)
+      }
 
-      // Simulate API delay
+      // TODO: Implement actual EXA API call when API key is available
+      console.log(`Scraping Twitter profile with EXA: ${handle}`)
+
+      // For now, simulate API delay and return enhanced mock data
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Return mock data
-      return {
-        bio: "Medical device sales professional | Healthcare tech enthusiast | Helping improve patient outcomes",
-        followerCount: 850,
-        followingCount: 1200,
-        tweetCount: 1450,
-        recentTweets: [
-          "Excited to attend the #MedTech conference next week!",
-          "New study shows improved outcomes with our latest surgical device",
-        ],
-        engagementRate: "Low",
-        hashtagsUsed: ["#MedTech", "#Healthcare", "#Surgery"],
-      }
+      return this.getMockTwitterData(handle)
     } catch (error) {
       console.error("Error scraping Twitter profile:", error)
-      return null
+      return this.getMockTwitterData(handle)
     }
   }
 
   async searchWebPresence(name: string, industry: string): Promise<ExaSearchResult[]> {
     try {
-      // In a real implementation, this would call the EXA API
-      console.log(`Searching web presence for: ${name} in ${industry}`)
+      if (!this.hasValidApiKey()) {
+        console.warn("EXA API key not available, using mock data for web presence search")
+        return this.getMockWebPresence(name, industry)
+      }
 
-      // Simulate API delay
+      // TODO: Implement actual EXA API call when API key is available
+      console.log(`Searching web presence with EXA for: ${name} in ${industry}`)
+
+      // For now, simulate API delay and return enhanced mock data
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // Return mock data
-      return [
-        {
-          title: `${name} discusses innovation in ${industry}`,
-          url: "https://example.com/article1",
-          content: `In a recent interview, ${name} shared insights about the future of ${industry} and how professionals can stay ahead of the curve.`,
-          publishedDate: "2023-10-15",
-        },
-        {
-          title: `Industry leaders in ${industry} to watch`,
-          url: "https://example.com/article2",
-          content: `${name} was featured in our list of top professionals making an impact in ${industry} this year.`,
-          publishedDate: "2023-08-22",
-        },
-      ]
+      return this.getMockWebPresence(name, industry)
     } catch (error) {
       console.error("Error searching web presence:", error)
-      return []
+      return this.getMockWebPresence(name, industry)
     }
   }
 
   async getIndustryBenchmarks(industry: string): Promise<any> {
     try {
-      // In a real implementation, this would call the EXA API
+      if (!this.hasValidApiKey()) {
+        console.warn("EXA API key not available, using static benchmarks")
+      }
+
+      // Industry benchmarks can be static or enhanced with EXA data
       console.log(`Getting industry benchmarks for: ${industry}`)
 
       // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      // Return mock data with industry-specific information
       const benchmarks = {
         "Medical Device Sales": {
           linkedinHeadlineFormat:
@@ -204,7 +185,6 @@ export class ExaService {
         },
       }
 
-      // Return the specific industry or a default
       return (
         benchmarks[industry] || {
           linkedinHeadlineFormat: "[Role] | Helping [Target Audience] [Achieve Goal] | [Specialization/Credential]",
@@ -230,5 +210,54 @@ export class ExaService {
       console.error("Error getting industry benchmarks:", error)
       return null
     }
+  }
+
+  private getMockLinkedInData(profileUrl: string) {
+    return {
+      headline: "Senior Medical Device Sales Representative | Helping Hospitals Improve Patient Outcomes",
+      summary:
+        "Experienced medical device sales professional with 8+ years helping healthcare organizations implement cutting-edge surgical technologies.",
+      experience: [
+        "Senior Sales Rep at MedTech Inc. (2018-Present)",
+        "Territory Manager at Surgical Innovations (2015-2018)",
+      ],
+      skills: ["Medical Devices", "Sales", "Healthcare", "CRM", "Negotiation"],
+      recommendations: 12,
+      connectionCount: "500+",
+      activityFrequency: "Weekly",
+      engagementRate: "Medium",
+    }
+  }
+
+  private getMockTwitterData(handle: string) {
+    return {
+      bio: "Medical device sales professional | Healthcare tech enthusiast | Helping improve patient outcomes",
+      followerCount: 850,
+      followingCount: 1200,
+      tweetCount: 1450,
+      recentTweets: [
+        "Excited to attend the #MedTech conference next week!",
+        "New study shows improved outcomes with our latest surgical device",
+      ],
+      engagementRate: "Low",
+      hashtagsUsed: ["#MedTech", "#Healthcare", "#Surgery"],
+    }
+  }
+
+  private getMockWebPresence(name: string, industry: string): ExaSearchResult[] {
+    return [
+      {
+        title: `${name} discusses innovation in ${industry}`,
+        url: "https://example.com/article1",
+        content: `In a recent interview, ${name} shared insights about the future of ${industry} and how professionals can stay ahead of the curve.`,
+        publishedDate: "2023-10-15",
+      },
+      {
+        title: `Industry leaders in ${industry} to watch`,
+        url: "https://example.com/article2",
+        content: `${name} was featured in our list of top professionals making an impact in ${industry} this year.`,
+        publishedDate: "2023-08-22",
+      },
+    ]
   }
 }

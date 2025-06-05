@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Loader2, CheckCircle, Globe, BarChart3, MessageSquare, Brain, Zap } from "lucide-react"
+import { Loader2, Globe, BarChart3, MessageSquare, Brain, Zap } from "lucide-react"
+import { InteractiveWaitingExperience } from "./interactive-waiting-experience"
 
 interface AIAssessmentProgressProps {
   userInfo: any
@@ -13,6 +14,8 @@ interface AIAssessmentProgressProps {
 export function AIAssessmentProgress({ userInfo, onComplete }: AIAssessmentProgressProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [additionalInsights, setAdditionalInsights] = useState<Record<string, any>>({})
+  const [showInteractive, setShowInteractive] = useState(false)
 
   const assessmentSteps = [
     {
@@ -48,60 +51,92 @@ export function AIAssessmentProgress({ userInfo, onComplete }: AIAssessmentProgr
   ]
 
   useEffect(() => {
-    const runAssessment = async () => {
-      for (let i = 0; i < assessmentSteps.length; i++) {
-        setCurrentStep(i)
-        setProgress((i / assessmentSteps.length) * 100)
+    // Show initial loading for a short time, then transition to interactive experience
+    const initialTimer = setTimeout(() => {
+      setShowInteractive(true)
+    }, 3000)
 
-        // Simulate AI processing time
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-      }
+    return () => clearTimeout(initialTimer)
+  }, [])
 
-      // Complete assessment with mock data
-      const mockResult = {
-        userInfo,
-        scores: {
-          professionalIdentity: 75,
-          platformConsistency: 60,
-          thoughtLeadership: 45,
-          networkStrength: 80,
-          discoverability: 55,
-        },
-        insights: {
-          strengths: [
-            "Strong professional network with 500+ connections",
-            "Clear industry expertise in medical device sales",
-            "Consistent professional image across platforms",
-          ],
-          improvements: [
-            "LinkedIn headline could better highlight unique value proposition",
-            "Twitter presence needs development for thought leadership",
-            "Content strategy lacks industry-specific keywords for SEO",
-          ],
-        },
-        recommendations: [
-          {
-            category: "Professional Identity",
-            priority: "High",
-            action: "Revise LinkedIn headline to include specific expertise and value proposition",
-            template:
-              "Medical Device Sales Expert | Helping Healthcare Organizations Improve Patient Outcomes | 10+ Years Experience",
-          },
-          {
-            category: "Thought Leadership",
-            priority: "Medium",
-            action: "Create weekly content series about medical device trends",
-            template: "Monday Medical Insights: Share industry trends and analysis",
-          },
+  const handleAdditionalInsights = (insights: Record<string, any>) => {
+    setAdditionalInsights((prev) => ({ ...prev, ...insights }))
+  }
+
+  const handleInteractiveComplete = () => {
+    // Complete assessment with enhanced data including additional insights
+    const mockResult = {
+      userInfo: {
+        ...userInfo,
+        additionalInsights,
+      },
+      scores: {
+        professionalIdentity: 75,
+        platformConsistency: 60,
+        thoughtLeadership: 45,
+        networkStrength: 80,
+        discoverability: 55,
+      },
+      insights: {
+        strengths: [
+          "Strong professional network with 500+ connections",
+          "Clear industry expertise in medical device sales",
+          "Consistent professional image across platforms",
         ],
-      }
-
-      setProgress(100)
-      setTimeout(() => onComplete(mockResult), 1000)
+        improvements: [
+          "LinkedIn headline could better highlight unique value proposition",
+          "Twitter presence needs development for thought leadership",
+          "Content strategy lacks industry-specific keywords for SEO",
+        ],
+      },
+      recommendations: [
+        {
+          category: "Professional Identity",
+          priority: "High",
+          action: "Revise LinkedIn headline to include specific expertise and value proposition",
+          template:
+            "Medical Device Sales Expert | Helping Healthcare Organizations Improve Patient Outcomes | 10+ Years Experience",
+        },
+        {
+          category: "Thought Leadership",
+          priority: "Medium",
+          action: "Create weekly content series about medical device trends",
+          template: "Monday Medical Insights: Share industry trends and analysis",
+        },
+      ],
     }
 
-    runAssessment()
-  }, [userInfo, onComplete])
+    // Enhance recommendations based on additional insights
+    if (additionalInsights["specific-expertise"]) {
+      mockResult.recommendations.push({
+        category: "Specialization",
+        priority: "High",
+        action: `Highlight your expertise in ${additionalInsights["specific-expertise"]} across all platforms`,
+        template: `${userInfo.industry} Specialist in ${additionalInsights["specific-expertise"]} | Driving Improved Outcomes`,
+      })
+    }
+
+    if (additionalInsights["value-metric"]) {
+      mockResult.recommendations.push({
+        category: "Value Proposition",
+        priority: "Medium",
+        action: `Emphasize ${additionalInsights["value-metric"]} in your messaging and case studies`,
+        template: `Helping healthcare providers achieve ${additionalInsights["value-metric"]} through innovative medical device solutions`,
+      })
+    }
+
+    onComplete(mockResult)
+  }
+
+  if (showInteractive) {
+    return (
+      <InteractiveWaitingExperience
+        userProfile={userInfo}
+        onAdditionalInsights={handleAdditionalInsights}
+        onComplete={handleInteractiveComplete}
+      />
+    )
+  }
 
   return (
     <Card className="max-w-4xl mx-auto">
@@ -118,53 +153,10 @@ export function AIAssessmentProgress({ userInfo, onComplete }: AIAssessmentProgr
               <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
               <Brain className="h-6 w-6 text-purple-400 absolute top-3 left-1/2 transform -translate-x-1/2" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
-              {assessmentSteps[currentStep]?.title || "Initializing AI Analysis..."}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {assessmentSteps[currentStep]?.description || "Preparing AI assessment..."}
-            </p>
-            <Progress value={progress} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-gray-500 mt-2">{Math.round(progress)}% Complete</p>
-          </div>
-
-          <div className="grid md:grid-cols-5 gap-4">
-            {assessmentSteps.map((step, index) => {
-              const IconComponent = step.icon
-              const isCompleted = index < currentStep
-              const isCurrent = index === currentStep
-
-              return (
-                <div key={step.id} className="text-center">
-                  <div
-                    className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center ${
-                      isCompleted ? "bg-green-100" : isCurrent ? "bg-purple-100" : "bg-gray-100"
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    ) : (
-                      <IconComponent className={`h-6 w-6 ${isCurrent ? "text-purple-600" : "text-gray-400"}`} />
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600">{step.title}</p>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <Brain className="h-4 w-4 text-purple-600" />
-              AI Analysis in Progress:
-            </h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Analyzing professional messaging and positioning</li>
-              <li>• Generating industry-specific recommendations</li>
-              <li>• Optimizing content for thought leadership</li>
-              <li>• Creating personalized SEO strategy</li>
-              <li>• Benchmarking against industry best practices</li>
-            </ul>
+            <h3 className="text-lg font-semibold mb-2">Initializing AI Analysis...</h3>
+            <p className="text-gray-600 mb-4">Preparing your personalized brand assessment</p>
+            <Progress value={15} className="w-full max-w-md mx-auto" />
+            <p className="text-sm text-gray-500 mt-2">15% Complete</p>
           </div>
         </div>
       </CardContent>

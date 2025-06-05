@@ -40,9 +40,17 @@ export class BrandingAgent {
     this.apiKey = apiKey
   }
 
+  private hasValidApiKey(): boolean {
+    return this.apiKey && this.apiKey.length > 0 && this.apiKey !== ""
+  }
+
   async createAnalysisPlan(userProfile: UserProfile): Promise<AnalysisPlan> {
+    if (!this.hasValidApiKey()) {
+      throw new Error("OpenAI API key is required for analysis plan generation")
+    }
+
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4o", { apiKey: this.apiKey }),
       schema: z.object({
         steps: z.array(
           z.object({
@@ -78,8 +86,12 @@ export class BrandingAgent {
     userProfile: UserProfile,
     previousAnswers: Record<string, any>,
   ): Promise<InteractiveQuestion[]> {
+    if (!this.hasValidApiKey()) {
+      throw new Error("OpenAI API key is required for question generation")
+    }
+
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4o", { apiKey: this.apiKey }),
       schema: z.object({
         questions: z.array(
           z.object({
@@ -126,8 +138,12 @@ export class BrandingAgent {
     gaps: string[]
     recommendations: any[]
   }> {
+    if (!this.hasValidApiKey()) {
+      throw new Error("OpenAI API key is required for analysis")
+    }
+
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4o", { apiKey: this.apiKey }),
       schema: z.object({
         currentState: z.object({
           linkedinHeadline: z.string(),
@@ -177,8 +193,12 @@ export class BrandingAgent {
   }
 
   async refineGoals(originalGoals: string, interactiveAnswers: Record<string, any>): Promise<string[]> {
+    if (!this.hasValidApiKey()) {
+      throw new Error("OpenAI API key is required for goal refinement")
+    }
+
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4o", { apiKey: this.apiKey }),
       schema: z.object({
         refinedGoals: z.array(z.string()),
       }),
@@ -205,8 +225,12 @@ export class BrandingAgent {
     headlines: string[]
     summaries: string[]
   }> {
+    if (!this.hasValidApiKey()) {
+      throw new Error("OpenAI API key is required for content generation")
+    }
+
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4o", { apiKey: this.apiKey }),
       schema: z.object({
         linkedinPosts: z.array(z.string()),
         twitterPosts: z.array(z.string()),
