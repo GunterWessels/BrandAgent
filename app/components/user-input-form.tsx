@@ -1,22 +1,20 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Loader2, Linkedin, Twitter } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Brain, Linkedin, Twitter } from "lucide-react"
 
 interface UserInputFormProps {
   onAnalysisStart: (userInfo: any) => void
-  onAnalysisComplete: (data: any) => void
-  isAnalyzing: boolean
 }
 
-export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: UserInputFormProps) {
+export function UserInputForm({ onAnalysisStart }: UserInputFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     linkedinUrl: "",
@@ -34,29 +32,29 @@ export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  if (isAnalyzing) {
-    return (
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Analyzing Your Brand Presence</h3>
-          <p className="text-gray-600 text-center">
-            We're searching across platforms and analyzing your content, messaging, and network...
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
+  const popularIndustries = [
+    "Medical Device Sales",
+    "Software Engineering",
+    "Financial Services",
+    "Marketing",
+    "Legal",
+    "Healthcare",
+    "Education",
+    "Real Estate",
+    "Consulting",
+    "Human Resources",
+  ]
 
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Search className="h-5 w-5" />
-          Let's Analyze Your Personal Brand
+          <Brain className="h-5 w-5 text-purple-600" />
+          AI-Powered Brand Analysis
         </CardTitle>
         <CardDescription>
-          Provide your information below and we'll conduct a comprehensive analysis of your online presence
+          Our AI agent will analyze your current presence and guide you through an interactive assessment to create your
+          personalized brand strategy
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -73,6 +71,30 @@ export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="industry">Industry/Field *</Label>
+            <div className="flex gap-2">
+              <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select your industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {popularIndustries.map((industry) => (
+                    <SelectItem key={industry} value={industry}>
+                      {industry}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Or enter custom industry"
+                value={formData.industry}
+                onChange={(e) => handleInputChange("industry", e.target.value)}
+                className="flex-1"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="linkedin" className="flex items-center gap-2">
               <Linkedin className="h-4 w-4" />
               LinkedIn Profile URL
@@ -83,6 +105,9 @@ export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing
               value={formData.linkedinUrl}
               onChange={(e) => handleInputChange("linkedinUrl", e.target.value)}
             />
+            <p className="text-xs text-gray-500">
+              Adding your LinkedIn profile allows our AI to analyze your current professional presence
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -99,29 +124,22 @@ export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="industry">Industry/Field</Label>
-            <Input
-              id="industry"
-              placeholder="e.g., Medical Device Sales, Technology, Healthcare"
-              value={formData.industry}
-              onChange={(e) => handleInputChange("industry", e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="goals">Personal Branding Goals (Optional)</Label>
+            <Label htmlFor="goals">Initial Personal Branding Goals</Label>
             <Textarea
               id="goals"
-              placeholder="What do you want to achieve with your personal brand? (e.g., thought leadership, career advancement, business development)"
+              placeholder="What do you want to achieve with your personal brand? (e.g., increase visibility, build thought leadership, expand network)"
               value={formData.goals}
               onChange={(e) => handleInputChange("goals", e.target.value)}
               rows={3}
             />
+            <p className="text-xs text-gray-500">
+              Don't worry if you're not sure - our AI will help you refine these during the analysis.
+            </p>
           </div>
 
           <Button type="submit" className="w-full" size="lg">
-            <Search className="h-4 w-4 mr-2" />
-            Analyze My Brand
+            <Brain className="h-4 w-4 mr-2" />
+            Start AI Analysis
           </Button>
         </form>
       </CardContent>

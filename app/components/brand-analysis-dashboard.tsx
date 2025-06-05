@@ -28,6 +28,35 @@ interface BrandAnalysisDashboardProps {
 export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
 
+  // Add safety checks for data structure
+  if (!data || !data.userProfile) {
+    return (
+      <Card className="max-w-4xl mx-auto">
+        <CardContent className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <h3 className="text-xl font-semibold mb-2">Loading Analysis Results...</h3>
+            <p className="text-gray-600">Please wait while we prepare your brand analysis.</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Provide default values for missing data
+  const userInfo = data.userProfile || { name: "User" }
+  const scores = data.scores || {
+    professionalIdentity: 0,
+    platformConsistency: 0,
+    thoughtLeadership: 0,
+    networkStrength: 0,
+    discoverability: 0,
+  }
+  const insights = data.insights || {
+    strengths: [],
+    improvements: [],
+  }
+  const recommendations = data.recommendations || []
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600"
     if (score >= 60) return "text-yellow-600"
@@ -51,35 +80,35 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
       title: "Professional Identity",
       icon: User,
       color: "blue",
-      score: data.scores.professionalIdentity,
+      score: scores.professionalIdentity,
     },
     {
       id: "platformConsistency",
       title: "Consistency",
       icon: Target,
       color: "green",
-      score: data.scores.platformConsistency,
+      score: scores.platformConsistency,
     },
     {
       id: "thoughtLeadership",
       title: "Thought Leadership",
       icon: TrendingUp,
       color: "purple",
-      score: data.scores.thoughtLeadership,
+      score: scores.thoughtLeadership,
     },
     {
       id: "networkStrength",
       title: "Network Strength",
       icon: Users,
       color: "orange",
-      score: data.scores.networkStrength,
+      score: scores.networkStrength,
     },
     {
       id: "discoverability",
       title: "Discoverability",
       icon: Globe,
       color: "indigo",
-      score: data.scores.discoverability,
+      score: scores.discoverability,
     },
   ]
 
@@ -111,7 +140,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
       {/* Header with overall score */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Brand Analysis for {data.userInfo.name}</CardTitle>
+          <CardTitle className="text-2xl">Brand Analysis for {userInfo.name}</CardTitle>
           <CardDescription>Comprehensive analysis of your personal brand across digital platforms</CardDescription>
         </CardHeader>
         <CardContent>
@@ -161,12 +190,15 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {data.insights.strengths.map((strength: string, index: number) => (
+                  {insights.strengths.map((strength: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                       <span className="text-sm">{strength}</span>
                     </li>
                   ))}
+                  {insights.strengths.length === 0 && (
+                    <li className="text-sm text-gray-500 italic">No strengths identified yet.</li>
+                  )}
                 </ul>
               </CardContent>
             </Card>
@@ -180,12 +212,15 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {data.insights.improvements.map((improvement: string, index: number) => (
+                  {insights.improvements.map((improvement: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                       <span className="text-sm">{improvement}</span>
                     </li>
                   ))}
+                  {insights.improvements.length === 0 && (
+                    <li className="text-sm text-gray-500 italic">No improvement areas identified yet.</li>
+                  )}
                 </ul>
               </CardContent>
             </Card>
@@ -194,33 +229,41 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
 
         <TabsContent value="recommendations" className="space-y-6">
           <div className="space-y-4">
-            {data.recommendations.map((rec: any, index: number) => (
-              <Card key={index}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{rec.category}</CardTitle>
-                    <Badge variant={rec.priority === "High" ? "destructive" : "secondary"}>
-                      {rec.priority} Priority
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700 mb-4">{rec.action}</p>
-                  {rec.template && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-600">Suggested Template:</span>
-                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(rec.template)}>
-                          <Copy className="h-4 w-4 mr-1" />
-                          Copy
-                        </Button>
-                      </div>
-                      <p className="text-sm italic">{rec.template}</p>
+            {recommendations.length > 0 ? (
+              recommendations.map((rec: any, index: number) => (
+                <Card key={index}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{rec.category || "General"}</CardTitle>
+                      <Badge variant={rec.priority === "High" ? "destructive" : "secondary"}>
+                        {rec.priority || "Medium"} Priority
+                      </Badge>
                     </div>
-                  )}
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-700 mb-4">{rec.action || "No action specified"}</p>
+                    {rec.template && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-600">Suggested Template:</span>
+                          <Button variant="outline" size="sm" onClick={() => copyToClipboard(rec.template)}>
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                        <p className="text-sm italic">{rec.template}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <p className="text-gray-500">No recommendations available yet.</p>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </TabsContent>
 

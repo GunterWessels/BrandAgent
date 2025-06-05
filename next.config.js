@@ -12,6 +12,7 @@ const nextConfig = {
   },
   env: {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    EXA_API_KEY: process.env.EXA_API_KEY,
   },
 }
 
