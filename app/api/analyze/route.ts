@@ -1,14 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { BrandingAgent } from "@/lib/ai-agent"
 import { ExaService } from "@/lib/exa-service"
+import { LoggingService } from "@/lib/logging-service" // Import LoggingService
 
 export async function POST(request: NextRequest) {
+  const loggingService = new LoggingService()
+  const startTime = Date.now()
+
   try {
     const body = await request.json()
     const { userProfile, step, answers, stepId } = body
 
-    console.log("API called with step:", step)
-    console.log("User profile:", userProfile)
+    loggingService.log(`API called with step: ${step}`)
+    loggingService.log(`User profile: ${JSON.stringify(userProfile)}`)
 
     // Check if we have the required API keys
     if (!process.env.OPENAI_API_KEY) {
@@ -21,10 +25,13 @@ export async function POST(request: NextRequest) {
     switch (step) {
       case "create-plan":
         try {
+          const createPlanStartTime = Date.now()
+          loggingService.log("Calling BrandingAgent.createAnalysisPlan")
           const plan = await agent.createAnalysisPlan(userProfile)
+          loggingService.log(`BrandingAgent.createAnalysisPlan completed in ${Date.now() - createPlanStartTime}ms`)
           return NextResponse.json({ plan })
         } catch (error) {
-          console.error("Error creating plan:", error)
+          loggingService.error("Error creating plan:", error)
           // Return fallback plan
           return NextResponse.json({
             plan: {
@@ -45,10 +52,15 @@ export async function POST(request: NextRequest) {
 
       case "generate-questions":
         try {
+          const generateQuestionsStartTime = Date.now()
+          loggingService.log("Calling BrandingAgent.generateInteractiveQuestions")
           const questions = await agent.generateInteractiveQuestions(stepId, userProfile, answers || {})
+          loggingService.log(
+            `BrandingAgent.generateInteractiveQuestions completed in ${Date.now() - generateQuestionsStartTime}ms`,
+          )
           return NextResponse.json({ questions })
         } catch (error) {
-          console.error("Error generating questions:", error)
+          loggingService.error("Error generating questions:", error)
           // Return fallback questions based on step
           const fallbackQuestions = getFallbackQuestions(stepId, userProfile)
           return NextResponse.json({ questions: fallbackQuestions })
@@ -56,23 +68,40 @@ export async function POST(request: NextRequest) {
 
       case "scrape-profiles":
         try {
+          const scrapeProfilesStartTime = Date.now()
           // Scrape LinkedIn profile if URL provided
           let linkedinData = null
           if (userProfile.linkedinUrl) {
+            loggingService.log("Calling ExaService.scrapeLinkedInProfile")
+            const linkedinStartTime = Date.now()
             linkedinData = await exaService.scrapeLinkedInProfile(userProfile.linkedinUrl)
+            loggingService.log(`ExaService.scrapeLinkedInProfile completed in ${Date.now() - linkedinStartTime}ms`)
           }
 
           // Scrape Twitter profile if handle provided
           let twitterData = null
           if (userProfile.twitterHandle) {
+            loggingService.log("Calling ExaService.scrapeTwitterProfile")
+            const twitterStartTime = Date.now()
             twitterData = await exaService.scrapeTwitterProfile(userProfile.twitterHandle)
+            loggingService.log(`ExaService.scrapeTwitterProfile completed in ${Date.now() - twitterStartTime}ms`)
           }
 
           // Search for web presence
+          loggingService.log("Calling ExaService.searchWebPresence")
+          const webPresenceStartTime = Date.now()
           const webPresence = await exaService.searchWebPresence(userProfile.name, userProfile.industry)
+          loggingService.log(`ExaService.searchWebPresence completed in ${Date.now() - webPresenceStartTime}ms`)
 
           // Get industry benchmarks
+          loggingService.log("Calling ExaService.getIndustryBenchmarks")
+          const industryBenchmarksStartTime = Date.now()
           const industryBenchmarks = await exaService.getIndustryBenchmarks(userProfile.industry)
+          loggingService.log(
+            `ExaService.getIndustryBenchmarks completed in ${Date.now() - industryBenchmarksStartTime}ms`,
+          )
+
+          loggingService.log(`Scrape profiles completed in ${Date.now() - scrapeProfilesStartTime}ms`)
 
           return NextResponse.json({
             linkedinData,
@@ -81,7 +110,7 @@ export async function POST(request: NextRequest) {
             industryBenchmarks,
           })
         } catch (error) {
-          console.error("Error scraping profiles:", error)
+          loggingService.error("Error scraping profiles:", error)
           return NextResponse.json({
             linkedinData: null,
             twitterData: null,
@@ -92,10 +121,13 @@ export async function POST(request: NextRequest) {
 
       case "final-analysis":
         try {
+          const finalAnalysisStartTime = Date.now()
           // First get web data
           let webData = {}
           if (userProfile.linkedinUrl || userProfile.twitterHandle) {
             try {
+              const scrapingResponseStartTime = Date.now()
+              loggingService.log("Calling /api/analyze with scrape-profiles")
               const scrapingResponse = await fetch(`${request.nextUrl.origin}/api/analyze`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -108,15 +140,35 @@ export async function POST(request: NextRequest) {
               if (scrapingResponse.ok) {
                 webData = await scrapingResponse.json()
               }
+              loggingService.log(
+                `/api/analyze with scrape-profiles completed in ${Date.now() - scrapingResponseStartTime}ms`,
+              )
             } catch (scrapingError) {
-              console.error("Error in scraping step:", scrapingError)
+              loggingService.error("Error in scraping step:", scrapingError)
             }
           }
 
           // Now perform the analysis with the additional web data
+          loggingService.log("Calling BrandingAgent.analyzeCurrentVsIdeal")
+          const analyzeCurrentVsIdealStartTime = Date.now()
           const analysis = await agent.analyzeCurrentVsIdeal(userProfile, answers, webData)
+          loggingService.log(
+            `BrandingAgent.analyzeCurrentVsIdeal completed in ${Date.now() - analyzeCurrentVsIdealStartTime}ms`,
+          )
+
+          loggingService.log("Calling BrandingAgent.refineGoals")
+          const refineGoalsStartTime = Date.now()
           const refinedGoals = await agent.refineGoals(userProfile.goals, answers)
+          loggingService.log(`BrandingAgent.refineGoals completed in ${Date.now() - refineGoalsStartTime}ms`)
+
+          loggingService.log("Calling BrandingAgent.generatePersonalizedContent")
+          const generatePersonalizedContentStartTime = Date.now()
           const content = await agent.generatePersonalizedContent({ ...userProfile, refinedGoals }, analysis)
+          loggingService.log(
+            `BrandingAgent.generatePersonalizedContent completed in ${Date.now() - generatePersonalizedContentStartTime}ms`,
+          )
+
+          loggingService.log(`Final analysis completed in ${Date.now() - finalAnalysisStartTime}ms`)
 
           return NextResponse.json({
             analysis,
@@ -125,7 +177,7 @@ export async function POST(request: NextRequest) {
             webData,
           })
         } catch (error) {
-          console.error("Error in final analysis:", error)
+          loggingService.error("Error in final analysis:", error)
           // Return fallback analysis
           return NextResponse.json({
             analysis: {
@@ -195,8 +247,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid step" }, { status: 400 })
     }
   } catch (error) {
-    console.error("API Error:", error)
+    loggingService.error("API Error:", error)
     return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 })
+  } finally {
+    const endTime = Date.now()
+    const duration = endTime - startTime
+    loggingService.log(`API call completed in ${duration}ms`)
   }
 }
 

@@ -111,11 +111,13 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
+    console.log("Template copied to clipboard:", text)
   }
 
   const handleDownloadReport = async () => {
     setIsExporting("word")
     try {
+      console.log("Downloading Word report...")
       const reportContent = ReportGenerator.generateComprehensiveReport(
         data.userInfo,
         detailedAnalysis,
@@ -124,6 +126,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
       const filename = `${data.userInfo.name.replace(/\s+/g, "_")}_Brand_Analysis_Report`
 
       await DocumentExportService.exportToWord(reportContent, filename)
+      console.log("Word report downloaded successfully.")
     } catch (error) {
       console.error("Error exporting to Word:", error)
       alert("Error exporting document. Please try again.")
@@ -135,6 +138,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
   const handleExportToPDF = async () => {
     setIsExporting("pdf")
     try {
+      console.log("Exporting to PDF...")
       const reportContent = ReportGenerator.generateComprehensiveReport(
         data.userInfo,
         detailedAnalysis,
@@ -143,6 +147,7 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
       const filename = `${data.userInfo.name.replace(/\s+/g, "_")}_Brand_Analysis_Report`
 
       await DocumentExportService.exportToPDF(reportContent, filename)
+      console.log("PDF exported successfully.")
     } catch (error) {
       console.error("Error exporting to PDF:", error)
       alert("Error exporting PDF. Please try again.")
@@ -199,7 +204,10 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
       <DetailedSectionAnalysis
         sectionId={selectedSection}
         analysis={detailedAnalysis}
-        onBack={() => setSelectedSection(null)}
+        onBack={() => {
+          console.log(`Navigating back from section: ${selectedSection}`)
+          setSelectedSection(null)
+        }}
       />
     )
   }
@@ -237,7 +245,10 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
                 <Card
                   key={category.id}
                   className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
-                  onClick={() => setSelectedSection(category.id)}
+                  onClick={() => {
+                    console.log(`Viewing section: ${category.title}`)
+                    setSelectedSection(category.id)
+                  }}
                 >
                   <CardContent className="text-center p-4">
                     <div className="flex items-center justify-center mb-2">
@@ -524,15 +535,34 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center">
-        <Button variant="outline" onClick={handleDownloadReport} disabled={isExporting === "word"}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            handleDownloadReport()
+            console.log("Download report button clicked.")
+          }}
+          disabled={isExporting === "word"}
+        >
           <Download className="h-4 w-4 mr-2" />
           {isExporting === "word" ? "Exporting..." : "Download Report (.doc)"}
         </Button>
-        <Button variant="outline" onClick={handleExportToPDF} disabled={isExporting === "pdf"}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            handleExportToPDF()
+            console.log("Export to PDF button clicked.")
+          }}
+          disabled={isExporting === "pdf"}
+        >
           <FileText className="h-4 w-4 mr-2" />
           {isExporting === "pdf" ? "Exporting..." : "Export to PDF"}
         </Button>
-        <Button onClick={() => setShowFollowUpModal(true)}>
+        <Button
+          onClick={() => {
+            setShowFollowUpModal(true)
+            console.log("Schedule follow-up button clicked.")
+          }}
+        >
           <Calendar className="h-4 w-4 mr-2" />
           Schedule Follow-up Analysis
         </Button>
@@ -543,7 +573,10 @@ export function BrandAnalysisDashboard({ data }: BrandAnalysisDashboardProps) {
         userProfile={userInfo}
         isOpen={showFollowUpModal}
         onClose={() => setShowFollowUpModal(false)}
-        onScheduled={handleFollowUpScheduled}
+        onScheduled={(followUp) => {
+          handleFollowUpScheduled(followUp)
+          console.log("Follow-up scheduled:", followUp)
+        }}
       />
     </div>
   )

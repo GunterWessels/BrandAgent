@@ -37,6 +37,7 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
   const [webData, setWebData] = useState<any>(null)
   const [isScrapingProfiles, setIsScrapingProfiles] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stepStartTime, setStepStartTime] = useState<number | null>(null)
 
   const steps = [
     {
@@ -79,6 +80,7 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
 
   useEffect(() => {
     loadQuestionsForStep(currentStep)
+    setStepStartTime(Date.now()) // Start timing the step
   }, [currentStep])
 
   const loadQuestionsForStep = async (stepIndex: number) => {
@@ -229,10 +231,17 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
 
   const handleAnswerChange = (questionId: string, value: any) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }))
+    // Log question response
+    console.log(`Question ${questionId} answered with:`, value)
   }
 
   const handleNextStep = () => {
     if (currentStep < steps.length - 1) {
+      // Log step progression timing
+      if (stepStartTime) {
+        const stepDuration = Date.now() - stepStartTime
+        console.log(`Step ${currentStep + 1} duration:`, stepDuration, "ms")
+      }
       setCurrentStep((prev) => prev + 1)
     }
   }
@@ -287,6 +296,8 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
 
       setAnalysisResults(finalResults)
       onComplete(finalResults)
+      // Log completion
+      console.log("Interactive analysis completed successfully.")
     } catch (error) {
       console.error("Error in final analysis:", error)
       setError("Analysis completed with some limitations. Showing available results.")
@@ -319,6 +330,8 @@ export function InteractiveAnalysis({ userProfile, onComplete }: InteractiveAnal
       }
 
       onComplete(fallbackResults)
+      // Log completion with limitations
+      console.log("Interactive analysis completed with limitations.")
     }
     setIsLoading(false)
   }

@@ -1,28 +1,57 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Target, TrendingUp, Globe, Brain } from "lucide-react"
 import { BrandAnalysisDashboard } from "./components/brand-analysis-dashboard"
 import { UserInputForm } from "./components/user-input-form"
 import { AIAssessmentProgress } from "./components/ai-assessment-progress"
+import { LoggingService } from "@/lib/logging-service"
 
 export default function BrandSMARTSApp() {
   const [analysisData, setAnalysisData] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showAssessment, setShowAssessment] = useState(false)
   const [formData, setFormData] = useState(null)
+  const [sessionId, setSessionId] = useState(null)
+  const [loggingService, setLoggingService] = useState(null)
+
+  useEffect(() => {
+    const newLoggingService = LoggingService.getInstance()
+    setLoggingService(newLoggingService)
+
+    return () => {
+      if (newLoggingService.getCurrentSession()) {
+        newLoggingService.endSession()
+      }
+    }
+  }, [])
 
   const handleAnalysisComplete = (data: any) => {
     setAnalysisData(data)
     setIsAnalyzing(false)
     setShowAssessment(false)
+
+    if (loggingService) {
+      loggingService.logAnalysisComplete(data)
+      loggingService.logRecommendations(data.recommendations || [])
+      loggingService.logGeneratedContent(data.content || null)
+      loggingService.endSession()
+    }
+    setSessionId(null)
   }
 
   const handleStartAssessment = (userInfo: any) => {
     setShowAssessment(true)
     setIsAnalyzing(true)
     setFormData(userInfo)
+
+    if (loggingService) {
+      const newSessionId = loggingService.startSession(userInfo)
+      setSessionId(newSessionId)
+      loggingService.logAnalysisStart()
+      loggingService.log("Assessment started", { userInfo })
+    }
   }
 
   return (

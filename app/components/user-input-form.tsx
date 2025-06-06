@@ -27,10 +27,12 @@ export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("Form submitted:", formData)
     onAnalysisStart(formData)
   }
 
   const handleInputChange = (field: string, value: string) => {
+    console.log(`Field ${field} changed to:`, value)
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -67,7 +69,9 @@ export function UserInputForm({ onAnalysisStart, onAnalysisComplete, isAnalyzing
               id="name"
               placeholder="Enter your full name"
               value={formData.name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
+              onChange={(e) => {
+                handleInputChange("name", e.target.value)
+              }}
               required
             />
           </div>
